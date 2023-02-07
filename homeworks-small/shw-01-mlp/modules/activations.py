@@ -86,7 +86,7 @@ class LogSoftmax(Module):
         :return: array of the same size
         """
         # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
-        return super().compute_output(input)
+        return sps.log_softmax(input, axis=1)
 
     def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
         """
@@ -95,4 +95,5 @@ class LogSoftmax(Module):
         :return: array of the same size
         """
         # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
-        return super().compute_grad_input(input, grad_output)
+        softmax = sps.softmax(input, axis=1)
+        return -grad_output.sum(axis=1).reshape(-1, 1) * softmax + grad_output

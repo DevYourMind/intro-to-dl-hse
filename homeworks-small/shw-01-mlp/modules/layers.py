@@ -1,5 +1,4 @@
 import numpy as np
-from typing import List
 from .base import Module
 
 
@@ -30,7 +29,6 @@ class Linear(Module):
         :param input: array of shape (batch_size, in_features)
         :return: array of shape (batch_size, out_features)
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
         output = input @ self.weight.T
         if self.bias is not None:
             output += self.bias
@@ -42,9 +40,7 @@ class Linear(Module):
         :param grad_output: array of shape (batch_size, out_features)
         :return: array of shape (batch_size, in_features)
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
-        grad_loss = grad_output @ self.weight
-        return grad_loss
+        return grad_output @ self.weight
 
     def update_grad_parameters(self, input: np.array, grad_output: np.array):
         """
@@ -61,13 +57,13 @@ class Linear(Module):
         if self.bias is not None:
             self.grad_bias.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self) -> list[np.array]:
         if self.bias is not None:
             return [self.weight, self.bias]
 
         return [self.weight]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self) -> list[np.array]:
         if self.bias is not None:
             return [self.grad_weight, self.grad_bias]
 
@@ -76,7 +72,7 @@ class Linear(Module):
     def __repr__(self) -> str:
         out_features, in_features = self.weight.shape
         return f'Linear(in_features={in_features}, out_features={out_features}, ' \
-               f'bias={not self.bias is None})'
+               f'bias={self.bias is not None})'
 
 
 class BatchNormalization(Module):
@@ -118,15 +114,16 @@ class BatchNormalization(Module):
         :param input: array of shape (batch_size, num_features)
         :return: array of shape (batch_size, num_features)
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
         if self.training:
             self.mean = input.mean(axis=0)
             self.var = input.var(axis=0, ddof=0)
             B = input.shape[0]
+            self.running_mean = (1 - self.momentum) * \
+                self.running_mean + self.momentum * self.mean
+            self.running_var = (1 - self.momentum) * self.running_var + \
+                self.momentum * B / (B - 1) * self.var
             self.sqrt_var = np.sqrt(self.var + self.eps)
             self.inv_sqrt_var = 1 / self.sqrt_var
-            self.running_mean = (1-self.momentum)*self.running_var + \
-                self.momentum * B / (B-1) * self.var
             self.norm_input = (input - self.mean) * self.inv_sqrt_var
         else:
             self.norm_input = (input - self.running_mean) / \
@@ -141,7 +138,7 @@ class BatchNormalization(Module):
         :param grad_output: array of shape (batch_size, num_features)
         :return: array of shape (batch_size, num_features)
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
+        assert input.shape == grad_output.shape == self.norm_input.shape
         if self.weight is not None:
             grad_output = grad_output * self.weight
         if not self.training:
@@ -155,7 +152,6 @@ class BatchNormalization(Module):
         :param input: array of shape (batch_size, num_features)
         :param grad_output: array of shape (batch_size, num_features)
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
         if self.affine:
             self.grad_bias += grad_output.sum(axis=0)
             self.grad_weight += (grad_output * self.norm_input).sum(axis=0)
@@ -165,10 +161,10 @@ class BatchNormalization(Module):
             self.grad_weight.fill(0)
             self.grad_bias.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self) -> list[np.array]:
         return [self.weight, self.bias] if self.affine else []
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self) -> list[np.array]:
         return [self.grad_weight, self.grad_bias] if self.affine else []
 
     def __repr__(self) -> str:
@@ -192,7 +188,6 @@ class Dropout(Module):
         :param input: array of an arbitrary size
         :return: array of the same size
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
         if not self.training:
             return input
         self.mask = np.random.binomial(n=1, p=(1 - self.p), size=input.shape)
@@ -204,8 +199,9 @@ class Dropout(Module):
         :param grad_output: array of the same size
         :return: array of the same size
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
         if self.training:
+            assert input.shape == grad_output.shape
+            assert self.mask.shape == grad_output.shape
             return self.mask * grad_output / (1 - self.p)
         return grad_output
 
@@ -227,8 +223,9 @@ class Sequential(Module):
         :param input: array of size matching the input size of the first layer
         :return: array of size matching the output size of the last layer
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
-        return super().compute_output(input)
+        for module in self.modules:
+            input = module.forward(input)
+        return input
 
     def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
         """
@@ -236,8 +233,12 @@ class Sequential(Module):
         :param grad_output: array of size matching the output size of the last layer
         :return: array of size matching the input size of the first layer
         """
-        # replace with your code ｀、ヽ｀、ヽ(ノ＞＜)ノ ヽ｀☂｀、ヽ
-        return super().compute_grad_input(input, grad_output)
+        for i in range(len(self.modules) - 1, 0, -1):
+            grad_output = self.modules[i].backward(
+                self.modules[i - 1].output, grad_output)
+        if self.modules:
+            grad_output = self.modules[0].backward(input, grad_output)
+        return grad_output
 
     def __getitem__(self, item):
         return self.modules[item]
@@ -254,10 +255,10 @@ class Sequential(Module):
         for module in self.modules:
             module.zero_grad()
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self) -> list[np.array]:
         return [parameter for module in self.modules for parameter in module.parameters()]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self) -> list[np.array]:
         return [grad for module in self.modules for grad in module.parameters_grad()]
 
     def __repr__(self) -> str:
