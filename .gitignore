@@ -5,3 +5,6 @@
 *ubyte.gz
 *.mat
 PokemonData
+*.json
+kaggle
+*-dataset
