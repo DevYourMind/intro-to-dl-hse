@@ -9,3 +9,7 @@ PokemonData
 kaggle
 *-dataset
 *cifar-10*
+*.zip
+*wikitext-2
+*.csv
+*.bin*
